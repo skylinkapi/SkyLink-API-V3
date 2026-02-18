@@ -1,0 +1,134 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Virtual environments
+env/
+.venv/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Environment variables
+.env
+.env.local
+.env.production
+
+# Logs
+*.log
+logs/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Large aircraft database files (too big for GitHub)
+basic-ac-db.json
+aircraft-database.json
+*.json.gz
+
+# Temporary files
+*.tmp
+*.temp
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# poetry
+poetry.lock
+
+# ── v3 additions ─────────────────────────────────────────
+
+# ML model artifacts (trained models are generated, not committed)
+ml_models/*.pkl
+ml_models/*.joblib
+ml_models/training_data/*.csv
+ml_models/training_data/*.parquet
+
+# SQLite database
+skylink_v3.db
+
+# Redis dump
+dump.rdb
+
+# SWIM NOTAM persistence cache
+notams_cache.json
+
+# Charts aerodrome cache/temp files
+charts_aerodrome/.venv/
+charts_aerodrome/__pycache__/
+
+# Claude Code / dev artifacts
+.claude/
+CLAUDE.md
+PLAN.md
+SKYLINK_V3_DEVELOPMENT_PLAN.md

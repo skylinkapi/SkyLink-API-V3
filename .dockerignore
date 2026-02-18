@@ -1,0 +1,76 @@
+# Git and version control
+.git
+.gitignore
+.gitattributes
+
+# Python cache and virtual environments
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+.venv
+venv/
+env/
+ENV/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Documentation and README files
+README.md
+*.md
+docs/
+
+# Development and testing files
+.pytest_cache/
+.coverage
+.tox/
+tests/
+
+# Environment and secrets
+.env
+.env.local
+.env.development
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Docker files (we don't need to copy these into the container)
+Dockerfile*
+docker-compose*.yml
+
+# Deployment files
+deploy.sh
+deploy.ps1
+
+# ML training data (models are copied, but raw training data is not)
+ml_models/training_data/*.csv
+ml_models/training_data/*.parquet
+
+# Charts aerodrome dev artifacts
+charts_aerodrome/.venv/
+charts_aerodrome/.git/
+charts_aerodrome/docs/
+
+# Claude Code / dev artifacts
+.claude/
+CLAUDE.md
+PLAN.md
+SKYLINK_V3_DEVELOPMENT_PLAN.md
+
+# Other
+.dockerignore

@@ -7,8 +7,7 @@ in memory for 1 hour to avoid re-downloading on every request.
 
 Text search uses a pre-built lowercase index for fast matching.
 
-Optimised: reusable httpx client for IP geolocation, to_dict("records")
-for safe DataFrame iteration, early-exit scoring in text search.
+IP geolocation uses a local DB-IP Lite MMDB database (no external API calls).
 """
 
 import math
@@ -16,10 +15,10 @@ import time
 import logging
 from typing import Optional, List, Dict, Any, Tuple
 
-import httpx
 import pandas as pd
 
 from services.airport_service import airport_service
+from services.v3.ip_geolocation import ip_geolocation_service
 from utils.adsb_utils import haversine_distance
 
 logger = logging.getLogger(__name__)
@@ -35,14 +34,6 @@ class AirportSearchService:
         self._cache_ts: float = 0.0
         # Pre-built search index (populated on first load)
         self._index: Optional[List[Dict[str, Any]]] = None
-        # Reusable httpx client for IP geolocation
-        self._ip_client: Optional[httpx.AsyncClient] = None
-
-    async def _get_ip_client(self) -> httpx.AsyncClient:
-        """Return a reusable client for IP geolocation requests."""
-        if self._ip_client is None or self._ip_client.is_closed:
-            self._ip_client = httpx.AsyncClient(timeout=5.0)
-        return self._ip_client
 
     # ── data loading & caching ────────────────────────────────────────
 
@@ -205,14 +196,8 @@ class AirportSearchService:
     # ── IP-based search ──────────────────────────────────────────────
 
     async def _geolocate_ip(self, ip: str) -> Dict[str, Any]:
-        """Resolve an IP address to coordinates via ip-api.com."""
-        client = await self._get_ip_client()
-        resp = await client.get(f"http://ip-api.com/json/{ip}")
-        resp.raise_for_status()
-        data = resp.json()
-        if data.get("status") != "success":
-            raise ValueError(data.get("message", "IP geolocation failed"))
-        return data
+        """Resolve an IP address to coordinates using the local GeoIP database."""
+        return await ip_geolocation_service.geolocate(ip)
 
     async def search_by_ip(
         self,

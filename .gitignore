@@ -122,6 +122,10 @@ dump.rdb
 # SWIM NOTAM persistence cache
 notams_cache.json
 
+# IP geolocation database (downloaded at runtime, ~100 MB)
+data/*.mmdb
+data/*.mmdb.gz.tmp
+
 # Charts aerodrome cache/temp files
 charts_aerodrome/.venv/
 charts_aerodrome/__pycache__/

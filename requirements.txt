@@ -44,3 +44,6 @@ solace-pubsubplus>=1.8.0
 # Date/Time utilities
 python-dateutil>=2.8.0
 pytz>=2023.3
+
+# In-house IP geolocation (DB-IP Lite MMDB, no external API)
+geoip2>=4.8.0

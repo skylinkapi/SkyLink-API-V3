@@ -83,14 +83,15 @@ class APIKeyMiddleware:
             return
 
         path: str = scope.get("path", "/")
+        headers: dict[bytes, bytes] = dict(scope.get("headers", []))
+        has_rapidapi = b"x-rapidapi-proxy-secret" in headers
+        has_apikey = b"x-api-key" in headers
+        print(f"[AUTH] path={path} rapidapi={has_rapidapi} apikey={has_apikey}", flush=True)
 
         # Public paths bypass auth
         if path in _PUBLIC_PATHS or path.startswith("/.well-known/acme-challenge/"):
             await self.app(scope, receive, send)
             return
-
-        # Parse headers once into a plain dict (header names are lowercase bytes)
-        headers: dict[bytes, bytes] = dict(scope.get("headers", []))
 
         # ── RapidAPI ──────────────────────────────────────────────────────────
         rapidapi_secret = headers.get(b"x-rapidapi-proxy-secret", b"").decode()

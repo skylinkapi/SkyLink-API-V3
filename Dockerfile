@@ -1,5 +1,5 @@
-# Use Python 3.11 slim image for smaller size and better performance
-FROM python:3.11-slim
+# Use Python 3.11 slim image from AWS ECR Public (no rate limits)
+FROM public.ecr.aws/docker/library/python:3.11-slim
 
 # Set working directory
 WORKDIR /app

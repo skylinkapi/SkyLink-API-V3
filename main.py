@@ -77,47 +77,45 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
         if request.url.path.startswith(self.ACME_CHALLENGE_PREFIX):
             return await call_next(request)
 
-        # Check for RapidAPI proxy secret
+        # ── RapidAPI ──────────────────────────────────────────────────────────
         rapidapi_secret = request.headers.get("X-RapidAPI-Proxy-Secret")
         if rapidapi_secret:
-            expected_rapidapi_secret = os.getenv("X_RAPIDAPI_PROXY_SECRET")
-            if expected_rapidapi_secret and rapidapi_secret == expected_rapidapi_secret:
+            expected = os.getenv("X_RAPIDAPI_PROXY_SECRET")
+            if expected and rapidapi_secret == expected:
                 return await call_next(request)
             return JSONResponse(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 content={
                     "error": "Unauthorized",
-                    "message": "Invalid RapidAPI proxy secret",
+                    "message": "Invalid RapidAPI proxy secret.",
                     "code": "INVALID_RAPIDAPI_SECRET"
                 }
             )
 
-        # Check for direct API key
-        api_key = request.headers.get("X-API-Key") or request.headers.get("X_API_KEY")
-
-        if not api_key:
+        # ── api.market ────────────────────────────────────────────────────────
+        api_market_key = request.headers.get("X-API-Key") or request.headers.get("X_API_KEY")
+        if api_market_key:
+            expected = os.getenv("X_API_KEY")
+            if expected and api_market_key == expected:
+                return await call_next(request)
             return JSONResponse(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 content={
                     "error": "Unauthorized",
-                    "message": "API key required. Include X-API-Key header with your request.",
-                    "code": "MISSING_API_KEY",
-                    "documentation": f"{request.base_url}docs"
+                    "message": "Invalid api.market key.",
+                    "code": "INVALID_API_MARKET_KEY"
                 }
             )
 
-        expected_api_key = os.getenv("X_API_KEY")
-        if expected_api_key and api_key != expected_api_key:
-            return JSONResponse(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                content={
-                    "error": "Unauthorized",
-                    "message": "Invalid API key provided",
-                    "code": "INVALID_API_KEY"
-                }
-            )
-
-        return await call_next(request)
+        # ── No marketplace credentials → block ────────────────────────────────
+        return JSONResponse(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            content={
+                "error": "Unauthorized",
+                "message": "Access to SkyLink API is available exclusively through api.market and RapidAPI.",
+                "code": "MARKETPLACE_ACCESS_REQUIRED"
+            }
+        )
 
 
 def _add_cors(application: FastAPI):

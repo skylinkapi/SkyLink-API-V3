@@ -3,10 +3,10 @@ import logging
 from contextlib import asynccontextmanager
 from typing import Dict, Any
 
-from fastapi import FastAPI, Request, status
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.types import ASGIApp, Receive, Scope, Send
 from dotenv import load_dotenv
 
 # v2 routers
@@ -60,70 +60,72 @@ swim_logger.setLevel(logging.INFO)
 DEBUG = os.getenv("DEBUG", "false").lower() == "true"
 
 
-# ── API key middleware (disabled for development) ─────────────────────────────
+# ── API key middleware ────────────────────────────────────────────────────────
 
-class APIKeyMiddleware(BaseHTTPMiddleware):
-    """API key validation middleware for SkyLink API"""
+_PUBLIC_PATHS = {
+    "/", "/health",
+    "/docs", "/redoc", "/openapi.json",
+    "/v2/docs", "/v2/redoc", "/v2/openapi.json",
+    "/v3/docs", "/v3/redoc", "/v3/openapi.json",
+}
+_ACME_PREFIX = b"/.well-known/acme-challenge/"
 
-    ACME_CHALLENGE_PREFIX = "/.well-known/acme-challenge/"
-    PUBLIC_PATHS = {
-        "/", "/health",
-        # root docs
-        "/docs", "/redoc", "/openapi.json",
-        # v2 docs
-        "/v2/docs", "/v2/redoc", "/v2/openapi.json",
-        # v3 docs
-        "/v3/docs", "/v3/redoc", "/v3/openapi.json",
-    }
 
-    async def dispatch(self, request: Request, call_next):
-        # Public endpoints bypass auth
-        if request.url.path in self.PUBLIC_PATHS:
-            return await call_next(request)
+class APIKeyMiddleware:
+    """Pure ASGI marketplace auth middleware — works correctly with mounted sub-apps."""
 
-        # ACME challenges always pass
-        if request.url.path.startswith(self.ACME_CHALLENGE_PREFIX):
-            return await call_next(request)
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        path: str = scope.get("path", "/")
+
+        # Public paths bypass auth
+        if path in _PUBLIC_PATHS or path.startswith("/.well-known/acme-challenge/"):
+            await self.app(scope, receive, send)
+            return
+
+        # Parse headers once into a plain dict (header names are lowercase bytes)
+        headers: dict[bytes, bytes] = dict(scope.get("headers", []))
 
         # ── RapidAPI ──────────────────────────────────────────────────────────
-        rapidapi_secret = request.headers.get("X-RapidAPI-Proxy-Secret")
+        rapidapi_secret = headers.get(b"x-rapidapi-proxy-secret", b"").decode()
         if rapidapi_secret:
-            expected = os.getenv("X_RAPIDAPI_PROXY_SECRET")
+            expected = os.getenv("X_RAPIDAPI_PROXY_SECRET", "")
             if expected and rapidapi_secret == expected:
-                return await call_next(request)
-            return JSONResponse(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                content={
-                    "error": "Unauthorized",
-                    "message": "Invalid RapidAPI proxy secret.",
-                    "code": "INVALID_RAPIDAPI_SECRET"
-                }
-            )
+                await self.app(scope, receive, send)
+                return
+            await _json_401(scope, receive, send, "Invalid RapidAPI proxy secret.", "INVALID_RAPIDAPI_SECRET")
+            return
 
         # ── api.market ────────────────────────────────────────────────────────
-        api_market_key = request.headers.get("X-API-Key") or request.headers.get("X_API_KEY")
+        api_market_key = headers.get(b"x-api-key", b"").decode()
         if api_market_key:
-            expected = os.getenv("X_API_KEY")
+            expected = os.getenv("X_API_KEY", "")
             if expected and api_market_key == expected:
-                return await call_next(request)
-            return JSONResponse(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                content={
-                    "error": "Unauthorized",
-                    "message": "Invalid api.market key.",
-                    "code": "INVALID_API_MARKET_KEY"
-                }
-            )
+                await self.app(scope, receive, send)
+                return
+            await _json_401(scope, receive, send, "Invalid api.market key.", "INVALID_API_MARKET_KEY")
+            return
 
         # ── No marketplace credentials → block ────────────────────────────────
-        return JSONResponse(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            content={
-                "error": "Unauthorized",
-                "message": "Access to SkyLink API is available exclusively through api.market and RapidAPI.",
-                "code": "MARKETPLACE_ACCESS_REQUIRED"
-            }
+        await _json_401(
+            scope, receive, send,
+            "Access to SkyLink API is available exclusively through api.market and RapidAPI.",
+            "MARKETPLACE_ACCESS_REQUIRED",
         )
+
+
+async def _json_401(scope: Scope, receive: Receive, send: Send, message: str, code: str) -> None:
+    response = JSONResponse(
+        status_code=401,
+        content={"error": "Unauthorized", "message": message, "code": code},
+    )
+    await response(scope, receive, send)
 
 
 def _add_cors(application: FastAPI):
@@ -136,10 +138,6 @@ def _add_cors(application: FastAPI):
         allow_headers=["*"],
     )
 
-
-def _add_auth(application: FastAPI):
-    """Add API key auth middleware. Comment out this call to disable auth."""
-    application.add_middleware(APIKeyMiddleware)
 
 
 # ── v2 sub-application ───────────────────────────────────────────────────────
@@ -360,7 +358,7 @@ app = FastAPI(
     openapi_version="3.0.2",
 )
 _add_cors(app)
-_add_auth(app)
+app.add_middleware(APIKeyMiddleware)
 
 # Mount versioned sub-applications
 app.mount("/v2", v2_app)

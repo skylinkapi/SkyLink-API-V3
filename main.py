@@ -66,7 +66,15 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
     """API key validation middleware for SkyLink API"""
 
     ACME_CHALLENGE_PREFIX = "/.well-known/acme-challenge/"
-    PUBLIC_PATHS = {"/", "/docs", "/redoc", "/openapi.json", "/health"}
+    PUBLIC_PATHS = {
+        "/", "/health",
+        # root docs
+        "/docs", "/redoc", "/openapi.json",
+        # v2 docs
+        "/v2/docs", "/v2/redoc", "/v2/openapi.json",
+        # v3 docs
+        "/v3/docs", "/v3/redoc", "/v3/openapi.json",
+    }
 
     async def dispatch(self, request: Request, call_next):
         # Public endpoints bypass auth
@@ -138,6 +146,7 @@ def _add_auth(application: FastAPI):
 
 v2_app = FastAPI(
     title="SkyLink API v2",
+
     description=(
         "## SkyLink API v2\n\n"
         "Stable production endpoints for aviation data:\n\n"
@@ -153,7 +162,6 @@ v2_app = FastAPI(
     openapi_version="3.0.2",
 )
 _add_cors(v2_app)
-_add_auth(v2_app)
 
 v2_app.include_router(airports_router)
 v2_app.include_router(airlines_router)
@@ -276,7 +284,6 @@ v3_app = FastAPI(
     ],
 )
 _add_cors(v3_app)
-_add_auth(v3_app)
 
 # v2 routers shared with v3 (unchanged endpoints)
 v3_app.include_router(airports_router)
@@ -353,6 +360,7 @@ app = FastAPI(
     openapi_version="3.0.2",
 )
 _add_cors(app)
+_add_auth(app)
 
 # Mount versioned sub-applications
 app.mount("/v2", v2_app)

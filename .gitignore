@@ -108,9 +108,8 @@ poetry.lock
 
 # ── v3 additions ─────────────────────────────────────────
 
-# ML model artifacts (trained models are generated, not committed)
+# ML model artifacts
 ml_models/*.pkl
-ml_models/*.joblib
 ml_models/training_data/*.csv
 ml_models/training_data/*.parquet
 
